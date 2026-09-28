@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "release": "1.2.13-beta.3",
+  "buildDate": "2026-09-28",
+  "baseProject": "huangtengsz-ui/u60pro-screen-ui",
+  "baseVersion": "1.0.0",
+  "devui": {
+    "version": "1.2.13-beta.3",
+    "asset": "u60pro-devui-aarch64",
+    "sha256": "a5d1f29ccd940754fefa45d9282d93856d51d95d3e99bb7b603f7d90113a3839",
+    "notes": "Compiled beta.3 renderer; ELF64 AArch64 static musl."
+  },
+  "ui": {
+    "version": "1.2.13-beta.3",
+    "requiredRendererMarker": "U60_SCREEN_BETA_3",
+    "asset": "ui.tar.gz",
+    "sha256": "333a97a2cb90960d844c5c94f9ac1800fa8072190c8f3e3831603d444a8e6d08",
+    "notes": "Install with the renderer from this package; adds traffic summaries and WiFi power/direct-supply controls."
+  },
+  "datad": {
+    "asset": "zwrt-datad-aarch64",
+    "sha256": "5077fd140bbb6e6b0344390b7a07ec53d85617f245f990388ff42bd135659677",
+    "unchanged": true,
+    "notes": "Existing paired data service; unchanged."
+  },
+  "validation": {
+    "cChecks": 397,
+    "installerCases": 11,
+    "hardwareVerified": false,
+    "longTermSoakVerified": false
+  }
+}

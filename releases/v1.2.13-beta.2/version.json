@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "release": "1.2.13-beta.2",
+  "buildDate": "2026-09-28",
+  "baseProject": "huangtengsz-ui/u60pro-screen-ui",
+  "baseVersion": "1.0.0",
+  "devui": {
+    "version": "1.2.13-beta.2",
+    "asset": "u60pro-devui-aarch64",
+    "sha256": "27742dacdf73c2d36b4871b32e7d8a44b25c4ad9830b9d98de80cbab4b62abf6",
+    "notes": "Compiled beta.2 renderer; ELF64 AArch64 static musl."
+  },
+  "ui": {
+    "version": "1.2.13-beta.2",
+    "asset": "ui.tar.gz",
+    "sha256": "7f6aa4832c1a2510dc2f51c7b300f36d6c696a6a315cccad1fa6d2c1a028a151",
+    "notes": "Install with the renderer from this package; Wi-Fi page unchanged."
+  },
+  "datad": {
+    "asset": "zwrt-datad-aarch64",
+    "sha256": "5077fd140bbb6e6b0344390b7a07ec53d85617f245f990388ff42bd135659677",
+    "unchanged": true,
+    "notes": "Existing paired data service; unchanged."
+  },
+  "validation": {
+    "cChecks": 344,
+    "installerCases": 11,
+    "hardwareVerified": false,
+    "longTermSoakVerified": false
+  }
+}

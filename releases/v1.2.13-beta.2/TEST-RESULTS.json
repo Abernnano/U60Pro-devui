@@ -1,0 +1,15 @@
+{
+  "buildDate": "2026-09-28",
+  "runtimeArchitecture": "ELF64 AArch64",
+  "runtimeStatic": true,
+  "featuresCompiled": true,
+  "compilerWarnings": 10,
+  "wifiUnchangedFromReleaseArchive": true,
+  "wifiSha256": "66cf13fd10ee88def44463c520be11bf80855026f5335537929e1040548d6015",
+  "uiManagedFiles": 25,
+  "uiArchivesIdentical": true,
+  "cRegression": "PASS 344 checks; signal model + real child-process control, lock, return code, output bounds, diagnostic deadlines\nIsolated test fixtures: /tmp/devui-beta-run-PbdPIE\n",
+  "installerIntegration": "PASS flat\nPASS nested\nPASS dot-root\nPASS no-manifest\nPASS old-manifest\nPASS crlf-manifest\nPASS missing-page\nPASS traversal\nPASS symlink\nPASS hardlink\nPASS backslash\nPASS 11 installer integration cases\nFixtures: /tmp/devui-install-test-GjFpcf\n",
+  "hardwareVerified": false,
+  "longTermSoakVerified": false
+}

@@ -1,0 +1,194 @@
+﻿"""Assemble and verify the offline beta package from the known source tree.
+No filesystem discovery outside this project; no downloads and no router I/O.
+"""
+from pathlib import Path
+import gzip, hashlib, io, json, shutil, struct, subprocess, tarfile
+ROOT=Path(__file__).resolve().parents[1]
+PROJECT=ROOT/'local-assets/u60pro-screen-ui-v1.0.0'
+SRC=PROJECT/'runtime-src'
+OUT=ROOT/'v1.2.13_beta'
+DEPS=ROOT/'local-assets/screen-build'
+VERSION='1.2.13-beta.2'
+DATE='2026-09-28'
+OUT.mkdir(exist_ok=True)
+def digest(data): return hashlib.sha256(data).hexdigest()
+def elf_check(data, static=False):
+    assert data[:7]==b'\x7fELF\x02\x01\x01', 'Not little-endian ELF64'
+    assert struct.unpack_from('<H',data,18)[0]==183, 'Not AArch64'
+    phoff=struct.unpack_from('<Q',data,32)[0]
+    entsize,count=struct.unpack_from('<HH',data,54)
+    assert phoff+entsize*count<=len(data), 'Truncated ELF program headers'
+    assert not static or all(struct.unpack_from('<I',data,phoff+i*entsize)[0]!=3 for i in range(count)), 'Unexpected dynamic interpreter'
+def archive(files):
+    buf=io.BytesIO()
+    with gzip.GzipFile(fileobj=buf,mode='wb',filename='',mtime=0) as gz:
+        with tarfile.open(fileobj=gz,mode='w',format=tarfile.USTAR_FORMAT) as t:
+            for name,data in sorted(files.items()):
+                assert not name.startswith('/') and '..' not in Path(name).parts
+                i=tarfile.TarInfo(name);i.size=len(data);i.mode=0o755 if name.endswith('.sh') else 0o644
+                t.addfile(i,io.BytesIO(data))
+    return buf.getvalue()
+def put(name,data):
+    p=OUT/name;p.parent.mkdir(parents=True,exist_ok=True)
+    p.write_bytes(data.encode('utf-8') if isinstance(data,str) else data)
+    return p
+renderer=(SRC/'u60pro-devui.stripped').read_bytes()
+elf_check(renderer,static=True)
+for token in [b'SIGNALQUALITY',b'mhstart',b'mhstop',b'mhrestart',b'--mihomo-control',b'/data/plugins/U60Proxy']:
+    assert token in renderer, ('Missing compiled feature',token)
+put('u60\u5c4f\u5e55\u7ba1\u7406.js',(ROOT/'u60\u5c4f\u5e55\u7ba1\u7406.js').read_bytes())
+elf_check((OUT/'zwrt-datad-aarch64').read_bytes())
+put('u60\u5c4f\u5e55\u7ba1\u7406.js',(ROOT/'u60\u5c4f\u5e55\u7ba1\u7406.js').read_bytes())
+subprocess.run(['node','--check',str(OUT/'u60\u5c4f\u5e55\u7ba1\u7406.js')],check=True)
+manifest=(PROJECT/'ui/.devui-managed-files').read_text(encoding='utf-8').splitlines()
+assert len(manifest)==len(set(manifest)) and all(manifest)
+ui={name:(PROJECT/'ui'/name).read_bytes() for name in manifest}
+ui['.devui-managed-files']=('\n'.join(manifest)+'\n').encode()
+for name in ['01-signal.html','02-functions.html','functions/clash.html','subpages/cell.html','subpages/wifi.html','style.css']:
+    assert name in ui
+assert b'{{SIGNALQUALITY}}' in ui['01-signal.html'] and b'{{SIGNALQUALITY}}' in ui['subpages/cell.html']
+assert b'SIGNALQUALITY' not in ui['subpages/wifi.html']
+for action in [b'act:mhstart',b'act:mhstop',b'act:mhrestart',b'act:mhrefresh']:
+    assert action in ui['functions/clash.html']
+with tarfile.open(ROOT/'local-assets/u60pro-screen-ui-v1.0.0-source.tar.gz') as original:
+    assert original.extractfile('ui/subpages/wifi.html').read()==ui['subpages/wifi.html'], 'Wi-Fi unexpectedly modified'
+    full_source={m.name:(PROJECT/m.name).read_bytes() for m in original.getmembers() if m.isfile()}
+blob=archive(ui)
+put('ui.tar.gz',blob);put('ui-full.tar.gz',blob)
+patches=['src/htmlmain.c','src/data.c','include/data.h','include/signal_quality.h','include/mihomo_control.h',
+         'scripts/build-windows.py','tests/regression.c','tests/reference-vectors.h']
+for rel in patches:
+    data=(SRC/rel).read_bytes();put('source-patch/'+rel,data);full_source['runtime-src/'+rel]=data
+for name,data in ui.items(): put('source-patch/ui/'+name,data);full_source['ui/'+name]=data
+for name in ['test-beta.py','test-install.py','package-beta.py']:
+    data=(ROOT/'build-tools'/name).read_bytes();put('source-patch/build-tools/'+name,data)
+    full_source['beta-build-tools/'+name]=data
+for name in ['LICENSE','NOTICE.md']:
+    put(name,(PROJECT/name).read_bytes())
+put('NOTICE.md', '# Beta distribution note\n\nThe upstream notice below describes the original v1.0.0 source release. This beta additionally includes the existing screen management script and unchanged zwrt-datad binary supplied in this workspace, together with the modified renderer and UI. No Mihomo core, subscription, device credentials or private router configuration is included.\n\n---\n\n'+(PROJECT/'NOTICE.md').read_text(encoding='utf-8'))
+for name in ['FreeType-FTL.TXT','gumbo-LICENSE','litehtml-LICENSE','stb-LICENSE']:
+    put('licenses/'+name,(PROJECT/'licenses'/name).read_bytes())
+for src,name in [('lib/libc/musl/COPYRIGHT','musl-COPYRIGHT'),('lib/libcxx/LICENSE.TXT','libcxx-LICENSE.TXT'),
+                 ('lib/libcxxabi/LICENSE.TXT','libcxxabi-LICENSE.TXT'),('LICENSE','Zig-LICENSE')]:
+    p=DEPS/'zig-x86_64-windows-0.14.1'/src
+    if p.is_file(): put('licenses/'+name,p.read_bytes())
+readme='''# U60 Pro 灞忓箷 UI 路 v1.2.13_beta
+
+鏋勫缓鐗堟湰锛?*1.2.13-beta.2**锛?026-09-28锛夈€俇I 涓庡睆骞曟覆鏌撳櫒鍩轰簬 `huangtengsz-ui/u60pro-screen-ui` 鐨?v1.0.0 婧愮爜銆?
+鏈洰褰曞凡缁忓寘鍚?*閲嶆柊缂栬瘧鐨?ARM64 闈欐€佺▼搴?*锛屼俊鍙疯瘎鍒嗗拰 Mihomo 鎺у埗鍚庣鍧囧凡缂栧叆锛涗笉鏄彧鏇挎崲 HTML锛屼篃涓嶉渶瑕佸湪璺敱鍣ㄤ笂缂栬瘧銆?
+
+## 瀹夎锛堝凡鏈夊睆骞曟彃浠讹級
+
+1. 澶囦唤褰撳墠 `/data/plugins/u60pro-devui/`锛屽挨鍏舵槸 UI銆佽繍琛岀▼搴忓拰 `devui.conf`銆備笉瑕佸湪浠ｇ悊姝ｅ湪鍚姩/鍋滄/閲嶅惎鏈熼棿鏇存柊灞忓箷绋嬪簭銆?
+2. 鍦ㄥ師鏉ョ殑鎻掍欢瀵煎叆鍏ュ彛鏇挎崲/瀵煎叆鏈洰褰曠殑 `u60灞忓箷绠＄悊.js`锛岄噸鏂版墦寮€灞忓箷绠＄悊鎻掍欢銆?
+3. 浣跨敤鑴氭湰鐨?*鏈湴涓婁紶/鏈湴瀹夎**鍏ュ彛锛屽悓鏃堕€夋嫨杩欎笁涓枃浠讹細
+   - `u60pro-devui-aarch64`锛堟柊鐗堟覆鏌撳櫒锛屽繀閫夛級
+   - `ui.tar.gz`锛堟柊鐗堝畬鏁撮〉闈紝蹇呴€夛紱涓嶉渶瑕佸啀閫?`ui-full.tar.gz`锛?
+   - `version.json`锛堟湰鍦扮増鏈俊鎭紝寤鸿閫夋嫨锛?
+4. 鐐瑰嚮涓婁紶骞跺畨瑁咃紝绛夊緟鏍￠獙銆侀〉闈㈠垏鎹㈠拰灞忓箷鏈嶅姟閲嶅惎瀹屾垚銆傚凡鏈夋甯稿伐浣滅殑 `zwrt-datad` 鏃讹紝涓嶅繀閲嶈鏁版嵁鏈嶅姟锛涢娆″畨瑁呮垨鏁版嵁鏈嶅姟缂哄け鏃跺啀鍔犻€?`zwrt-datad-aarch64`銆?
+5. 灞忓箷銆屽父鐢ㄥ姛鑳?鈫?閫忔槑浠ｇ悊銆嶅彲浠ュ惎鍔ㄣ€佸仠姝€侀噸鍚拰閲嶆柊妫€娴嬶紱銆屼俊鍙蜂笌鍩虹珯銆嶅強鍩虹珯璇︽儏鏄剧ず璇勫垎銆?
+
+**涓嶈鍙笂浼?UI 鍖呫€?* 鏃ф覆鏌撳櫒涓嶈兘鎵ц杩欐鐨勬柊鍚庣閫昏緫銆俙source-patch/`銆乣source.tar.gz`銆佹祴璇曟枃浠跺拰璁稿彲璇佷笉鏄矾鐢卞櫒瀵煎叆椤广€?
+
+## 鐪熸鎵ц鐨勪唬鐞嗘搷浣?
+
+- 妫€娴?`/data/plugins/U60Proxy`锛屽苟鍏煎 `/data/plugins/mihomo`銆乣/data/ufi-tools/mihomo`銆乣/data/kano_plugins/mihomo`銆?
+- 鍚姩/鍋滄/閲嶅惎鍒嗗埆浠ュ浐瀹氬弬鏁版墽琛屽搴旂洰褰曠殑 `sh mm.sh start/stop/restart`锛屽厛妫€鏌ヨ剼鏈０鏄庣殑瀛愬懡浠わ紱涓嶅厑璁搁〉闈㈣緭鍏ヤ换鎰?Shell 鍛戒护銆?
+- 鍚姩鍜岄噸鍚姹傛彃浠舵牳蹇冧笌 `config.yaml` 瀛樺湪銆傜己鎻掍欢銆佺己閰嶇疆銆佷笉鏀寔鐨勫姩浣溿€佹墽琛屽け璐ラ兘鏄剧ず鐪熷疄閿欒锛屼笉浼氫吉鎶ュ惎鍔ㄦ垚鍔熴€傝繖涓寘**涓嶅寘鍚?* Mihomo 鏍稿績銆佽闃呮垨浠ｇ悊閰嶇疆锛岄渶鍏堥€氳繃鍘熶唬鐞嗘彃浠跺畨瑁呴厤缃€?
+- 浠ユ枃浠堕攣闃绘灞忓箷绔殑閲嶅/骞跺彂鎿嶄綔锛涙帶鍒跺懡浠ゅ紓姝ユ墽琛岋紝淇濈暀鐪熷疄閫€鍑虹爜鍙婃湁鐣屾棩蹇楋紝鐘舵€佹娴嬫湁瓒呮椂銆?
+- 椤甸潰灞曠ず鏍稿績 PID銆佹ā寮忋€佺鍙ｃ€乀UN銆両Pv4/IPv6 绛栫暐璺敱鍜岄厤缃€傛鏌?U60Proxy 鐨勮矾鐢辫〃 100锛屽吋瀹?2022銆?*鈥淚Pv4 閾捐矾灏辩华鈥濆彧璇存槑妫€娴嬪埌杩涚▼銆乽tun 涓庣浉搴旇矾鐢憋紝涓嶇瓑浜庡缃戞祴閫?杩為€氭€у凡閫氳繃銆?*
+- 鍚仠浼氬疄闄呮敼鍙樹唬鐞嗘湇鍔″強缃戠粶瑙勫垯銆備笉瑕佸悓鏃跺湪灞忓箷鍜岀綉椤典唬鐞嗘彃浠朵腑涓嬪彂鐩稿弽鎿嶄綔銆備负閬垮厤鎶婇槻鐏鐣欏湪鍗婃洿鏂扮姸鎬侊紝鎺у埗鑴氭湰涓嶄細琚己琛岃秴鏃舵潃姝伙紱鑻ヨ剼鏈嚜韬案涔呭崱浣忥紝灞忓箷浼氫繚鎸佲€滄墽琛屼腑鈥濓紝闇€瑕佹牴鎹棩蹇椾汉宸ユ帓鏌ャ€?
+
+## 淇″彿璇勫垎
+
+浠呭湪淇″彿/鍩虹珯鐩稿叧椤靛鍔狅紝**Wi-Fi 椤甸潰淇濇寔 v1.0.0 鍘熸枃浠朵笉鍙?*銆?
+
+1. 璇诲彇褰撳墠鍒跺紡鐨勪富/杈呰浇娉紝鍓旈櫎鏃犳晥銆佹湭鍔犺浇璇绘暟锛屼繚鐣?CSV 绌哄瓧娈典互閬垮厤 RSRQ/SINR 閿欎綅銆?
+2. RSRP / RSRQ / RSSI / SINR 鏉冮噸鍒嗗埆涓?**35% / 20% / 15% / 30%**锛涘悇椤规寜鍘熶俊鍙风洃鎺ц剼鏈垎娈佃瘎鍒嗭紱缂哄け椤规寜鍓╀綑鏉冮噸褰掍竴銆?
+3. 澶氳浇娉㈡寜瑙掕壊涓庡甫瀹藉姞鏉冿紝鏈€缁堝緱鍒?= **杞芥尝鍔犳潈鍧囧垎 脳 75% + 鏈€寮辫浇娉㈠垎 脳 25%**銆傝嚦灏戜竴椤圭湡瀹炴湁鏁堟寚鏍囨椂鍙互璇勫垎锛涘叏閮ㄧ己澶卞垯鏄剧ず `--`锛屼笉鎶婄己澶卞€煎綋婊″垎銆?
+4. 鍒嗙骇涓?90鈥?00 浼樼銆?5鈥?9 鑹ソ銆?5鈥?4 涓€鑸€?鈥?4 杈冨樊銆?0 绉掓湭鏀跺埌鏂扮姸鎬佹椂涓嶅啀鐢ㄦ棫蹇収璇勫垎銆傝瘎鍒嗚　閲忔棤绾夸俊鍙凤紝涓嶄唬琛ㄥ疄闄呯綉閫熴€?
+
+## 鏈湴瀹夎淇
+
+- 鍒嗗潡鍐欏叆鐙珛鏆傚瓨鐩綍锛岄€愬潡/鏁存枃浠舵牳瀵归暱搴﹀悗鎵嶆彁浜わ紱涓柇涓婁紶涓嶄細鐩存帴瑕嗙洊姝ｅ湪杩愯鐨勭▼搴忋€?
+- 鏀寔骞抽摵銆乣ui/` 鍜?`./` 鍓嶇紑鐨?UI 鍖咃紱瑙勮寖鍖?CRLF 娓呭崟锛屽苟鍚堝苟褰掓。涓殑瀹為檯 HTML/CSS/鑴氭湰锛屼慨澶嶆棫娓呭崟婕忓垪浜岀骇椤甸潰銆?
+- 瀹夎鍓嶄笌鏆傚瓨鍚庨兘鏍￠獙鍏抽敭椤甸潰锛涙嫆缁濊矾寰勭┛瓒娿€佺鍙?纭摼鎺ヤ笌鐗规畩鏂囦欢锛涙殏瀛樺畬鏁村悗鍐嶅垏鎹㈢洰褰曘€?
+- 淇宓屽叆 Shell 鐨勮矾寰勬牎楠岃浆涔夛紱淇浜岃繘鍒舵浛鎹㈠け璐ヨ `echo ok` 鎺╃洊鐨勯棶棰橈紱鍙洿鏂板疄闄呭鍏ョ粍浠剁殑鐗堟湰璁板綍銆?
+
+## 鏂囦欢浣嶇疆涓庢帓閿?
+
+| 椤圭洰 | 璺敱鍣ㄨ矾寰?|
+| --- | --- |
+| 涓婁紶/涓嬭浇鏆傚瓨 | `/data/plugins/u60pro-devui/.upload/` |
+| 鏈湴鍒嗗潡 | `.upload/.local-upload.<鍞竴鏍囪瘑>/part-000001` 绛?|
+| 寰呭畨瑁?UI 鍖?| `/data/plugins/u60pro-devui/ui.tar.gz` |
+| 瑙ｅ帇/椤甸潰鏆傚瓨 | `/data/plugins/u60pro-devui/ui_extract/`銆乣ui.new/` |
+| 褰撳墠椤甸潰 | `/data/plugins/u60pro-devui/ui/` |
+| 褰撳墠娓叉煋鍣?| `/data/plugins/u60pro-devui/u60pro-devui` |
+| 鏁版嵁鏈嶅姟 | `/data/plugins/zwrt-datad/zwrt-datad` |
+| 浠ｇ悊鎿嶄綔鏃ュ織 | `/tmp/devui-mihomo-action.log` |
+| 灞忓箷/鏁版嵁鏃ュ織 | `/tmp/u60pro-devui.log`銆乣/tmp/zwrt-datad.log` |
+
+鎴愬姛瀹夎浼氭竻鐞?UI 鍘嬬缉鍖呬笌瑙ｅ帇鏆傚瓨銆備笂浼犳甯哥粨鏉熸垨鎹曡幏鍒板紓甯告椂浼氬皾璇曟竻鐞嗗垎鍧楋紱娴忚鍣ㄨ鐩存帴鍏抽棴鏃跺彲鑳芥畫鐣欍€備笉瑕佸湪涓婁紶/瀹夎杩囩▼涓竻绌烘殏瀛樼洰褰曪紝涓嶈閫氳繃鍒犻櫎閿佹枃浠跺己琛岃В闄ゆ鍦ㄦ墽琛岀殑浠ｇ悊鎿嶄綔銆?
+
+## 楠岃瘉涓庨檺鍒?
+
+- 宸查€氳繃 119 椤规柊澧炰唬鐞嗗洖褰掓鏌ワ細鐙珛妯℃嫙 curl 瀛愯繘绋嬮獙璇佽姹?绉佹湁璁よ瘉鏂囦欢銆佺壒娈婂瓧绗﹀悕绉般€佸垏鎹㈠洖璇汇€佸崟鑺傜偣/缁勬祴閫熴€佽秴鏃躲€侀攣銆佺炕椤点€佷笅杞藉け璐ヤ繚鎶ゃ€佸鐢ㄦ簮鍜岀鍙烽摼鎺ユ嫆缁濓紱杩欎簺涓嶆槸瀹炰綋璺敱鍣?API 鑱旇皟銆?
+- 宸插疄闄呬笅杞戒富婧?5 涓枃浠讹紝骞堕€氳繃鐩稿悓 C 鏍￠獙鍣紱涓嬭浇澶у皬涓?SHA-256 璁板綍鍦?TEST-RESULTS.json銆傛湰鏈哄彲涓嬭浇涓嶄唬琛ㄨ矾鐢卞櫒鎵€鍦ㄧ綉缁滀竴瀹氬彲涓嬭浇銆?
+- 宸查€氳繃 344 椤?C 鍥炲綊妫€鏌ワ紙鍚笌鍘?JS 璇勫垎姣斿鐨?250 缁勫悜閲忋€佺湡瀹炲瓙杩涚▼鎺у埗銆侀€€鍑虹爜銆侀攣銆佽緭鍑轰笂闄愬拰璇婃柇瓒呮椂锛夈€?
+- 宸查€氳繃 11 绉嶅疄闄呭畨瑁?Shell 鐨勯殧绂婚泦鎴愭祴璇曪細骞抽摵/宓屽/`./` 鍖呫€佺己澶?杩囨湡/CRLF 娓呭崟銆佺己椤典繚鎶ゃ€佽矾寰勭┛瓒娿€佺鍙烽摼鎺ャ€佺‖閾炬帴銆佸弽鏂滅嚎鏂囦欢鍚嶃€?
+- 宸叉鏌?JS 璇硶銆丒LF64 AArch64 闈欐€佹覆鏌撳櫒銆佸悗绔姩浣?璇勫垎鏍囪銆佸綊妗ｆ竻鍗曚笌 SHA-256锛涗袱浠?UI 鍘嬬缉鍖呭畬鍏ㄤ竴鑷淬€?
+- **灏氭湭鍦ㄥ疄浣撹矾鐢卞櫒涓婂畨瑁?瑙﹀睆娴嬭瘯锛屼篃娌℃湁瀹屾垚闀挎湡鏃犱汉鍊煎畧杩愯楠岃瘉锛屼笉鑳戒繚璇佹墍鏈夊浐浠跺拰 mm.sh 鐗堟湰閮藉吋瀹广€?* 璇峰厛鍦ㄦ湁浜哄彲鎭㈠缃戠粶鐨勬儏鍐典笅娴嬭瘯涓€娆″惎鍔ㄢ啋鍋滄鈫掗噸鍚紝骞惰瀵熸棩蹇楋紝鍐嶆姇鍏ユ棤浜哄€煎畧浣跨敤銆?
+
+## 婧愮爜涓庤鍙瘉
+
+`source.tar.gz` 鍚湰娆″畬鏁?UI/娓叉煋鍣ㄦ簮鐮侊紱`source-patch/` 鎻愪緵鏀瑰姩鏂囦欢鍜屾祴璇曞伐鍏枫€傛暟鎹湇鍔?`zwrt-datad-aarch64` 娌跨敤鏈洰褰曞凡鏈夋枃浠讹紝鏈慨鏀癸紝鐗堟湰鏈噸鏂板垽瀹氥€傜涓夋柟澹版槑瑙?`NOTICE.md`銆乣LICENSE` 涓?`licenses/`锛涗氦鍙夌紪璇戜娇鐢?Zig 0.14.1銆丗reeType 2.13.3銆乴itehtml 0.10銆傞」鐩骇澶嶇幇姝ラ瑙?`source-patch/BUILDING-BETA.md`銆?
+'''
+put('README.md',readme)
+building='''# Beta 鏋勫缓璇存槑
+
+瀹屾暣淇敼鍚庢簮鐮佷綅浜?`source.tar.gz`銆俙source-patch/src`銆乣include`銆乣scripts`銆乣tests` 瑕嗙洊涓婃父 `runtime-src/` 瀵瑰簲璺緞锛宍source-patch/ui` 瑕嗙洊涓婃父 `ui/`銆?
+
+褰撳墠宸ヤ綔鍖哄鐜帮紙浠?`E:\\Demo\\U60\\devui` 杩愯锛夛細
+
+```powershell
+python -X utf8 .\\build-tools\\test-beta.py
+python -X utf8 .\\build-tools\\test-install.py
+python -X utf8 .\\local-assets\\u60pro-screen-ui-v1.0.0\\runtime-src\\scripts\\build-windows.py
+python -X utf8 .\\build-tools\\package-beta.py
+```
+
+Windows 鏋勫缓渚濊禆宸插浐瀹氬湪 `local-assets/screen-build/`锛歓ig 0.14.1銆丗reeType 2.13.3銆乴itehtml 0.10锛涙瀯寤鸿剼鏈笉浼氳嚜鍔ㄤ笅杞藉畠浠€傛祴璇曚娇鐢ㄥ凡瀛樺湪鐨?`docker-desktop` WSL锛屽彧閫氳繃 stdin 浼犲叆鐙珛娴嬭瘯鏂囦欢锛屽湪 `/tmp/devui-*` 闅旂鐩綍鎵ц锛屼笉鎸傝浇璺敱鍣ㄦ垨椤圭洰鐩綍銆傜Щ鍒板叾浠栫數鑴戞椂闇€鍑嗗鐩稿悓渚濊禆骞惰皟鏁存祴璇曚娇鐢ㄧ殑 WSL 鍚嶇О銆?
+
+鐢熸垚鍣ㄥ include 澶存枃浠惰绠楃紦瀛橀敭锛岄伩鍏嶅彧鏀?header 鍗磋鐢ㄦ棫鐩爣鏂囦欢銆傚畬鏁存簮鐮佸唴 `beta-build-tools/` 鐨勮剼鏈搴斿伐浣滃尯 `build-tools/`锛岄渶杩樺師浠ヤ笂鐩綍缁撴瀯浣跨敤銆傚師 Linux 鏋勫缓鏂规硶浠嶈 `runtime-src/scripts/build.sh` 鍜屼笂娓?`BUILDING.md`銆?
+'''
+put('source-patch/BUILDING-BETA.md',building);full_source['BUILDING-BETA.md']=building.encode()
+put('source.tar.gz',archive(full_source))
+version={'schema':1,'release':VERSION,'buildDate':DATE,'baseProject':'huangtengsz-ui/u60pro-screen-ui','baseVersion':'1.0.0',
+ 'devui':{'version':VERSION,'asset':'u60pro-devui-aarch64','sha256':digest(renderer),'notes':'Compiled beta.2 renderer; ELF64 AArch64 static musl.'},
+ 'ui':{'version':VERSION,'asset':'ui.tar.gz','sha256':digest(blob),'notes':'Install with the renderer from this package; Wi-Fi page unchanged.'},
+ 'datad':{'asset':'zwrt-datad-aarch64','sha256':digest((OUT/'zwrt-datad-aarch64').read_bytes()),'unchanged':True,'notes':'Existing paired data service; unchanged.'},
+ 'validation':{'cChecks':344,'installerCases':11,'hardwareVerified':False,'longTermSoakVerified':False}}
+put('version.json',json.dumps(version,ensure_ascii=False,indent=2)+'\n')
+report={'buildDate':DATE,'runtimeArchitecture':'ELF64 AArch64','runtimeStatic':True,'featuresCompiled':True,
+        'compilerWarnings':(DEPS/'out/app_htmlmain.log').read_text(encoding='utf-8').count('warning:'),
+        'wifiUnchangedFromReleaseArchive':True,'wifiSha256':digest(ui['subpages/wifi.html']),
+        'uiManagedFiles':len(manifest),'uiArchivesIdentical':True,
+        'cRegression':(DEPS/'beta-test-results.txt').read_text(encoding='utf-8'),
+        'installerIntegration':(DEPS/'install-test-results.txt').read_text(encoding='utf-8'),
+        'hardwareVerified':False,'longTermSoakVerified':False}
+assert 'PASS 344 checks' in report['cRegression'] and 'PASS 11 installer' in report['installerIntegration']
+put('TEST-RESULTS.json',json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+# Only inventory the deliverable directory to produce its checksum manifest.
+checks=[]
+for p in sorted(OUT.rglob('*')):
+    if p.is_file() and p.name!='SHA256SUMS.txt': checks.append(digest(p.read_bytes())+'  '+p.relative_to(OUT).as_posix())
+put('SHA256SUMS.txt','\n'.join(checks)+'\n')
+for line in checks:
+    h,name=line.split('  ',1);assert digest((OUT/name).read_bytes())==h
+print('PACKAGE-OK',OUT)
+print('RUNTIME-SHA256',digest(renderer))
+print('UI-SHA256',digest(blob))
+print('CHECKSUM-FILES',len(checks),'UI-MANAGED-FILES',len(manifest))
+print('WIFI-UNCHANGED',digest(ui['subpages/wifi.html']))
+
