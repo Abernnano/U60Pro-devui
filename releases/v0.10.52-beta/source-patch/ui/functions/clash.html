@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Mihomo Transparent Proxy</title>
+</head>
+<body>
+  <div class="card mh-overview">
+    <div class="mh-heading">
+      <b class="mh-title">&#77;&#105;&#104;&#111;&#109;&#111; &#36879;&#26126;&#20195;&#29702;</b>
+      <span class="mh-state {{MHSTATECLASS}}">{{MHSTATE}}</span>
+    </div>
+    <div class="mh-summary">&#29366;&#24577;&#30001;&#35774;&#22791;&#19978;&#30340;&#36827;&#31243;&#12289;&#84;&#85;&#78; &#19982;&#31574;&#30053;&#36335;&#30001;&#23454;&#26102;&#26816;&#27979;&#12290;</div>
+    <div class="mh-stats">
+      <div class="mh-stat"><span>&#36816;&#34892;&#27169;&#24335;</span><b>{{MHMODE}}</b></div>
+      <div class="mh-stat"><span>&#77;&#105;&#120;&#101;&#100; &#31471;&#21475;</span><b>{{MHPORT}}</b></div>
+      <div class="mh-stat"><span>&#26680;&#24515;&#29256;&#26412;</span><b>{{MHVERSION}}</b></div>
+      <div class="mh-stat"><span>&#36827;&#31243; PID</span><b>{{MHPID}}</b></div>
+    </div>
+  </div>
+
+  <div class="card mh-control-card">
+    <div class="title">&#26381;&#21153;&#25511;&#21046;</div>
+    <div class="mh-controls">
+      <a href="act:mhstart" class="svc-btn mh-action {{MHRUNCLASS}}">&#21551;&#21160;&#36879;&#26126;&#20195;&#29702;</a>
+      <a href="act:mhstop" class="svc-btn mh-action mh-stop {{MHSTOPCLASS}}">&#20572;&#27490;&#20195;&#29702;</a>
+    </div>
+    <div class="mh-controls mh-controls-secondary">
+      <a href="act:mhrestart" class="svc-btn mh-action {{MHRESTARTCLASS}}">&#37325;&#21551;&#26381;&#21153;</a>
+      <a href="act:mhrefresh" class="svc-btn mh-action">&#37325;&#26032;&#26816;&#27979;</a>
+    </div>
+    <p class="func-note">&#25805;&#20316;&#20250;&#35843;&#29992;&#24050;&#23433;&#35013;&#25554;&#20214;&#30340; mm.sh&#65307;&#26356;&#26032;&#26816;&#27979;&#21482;&#35835;&#21462;&#35774;&#22791;&#23454;&#38469;&#29366;&#24577;&#12290;</p>
+    <div class="svc-log">{{MHACTIONLOG}}</div>
+  </div>
+
+  <div class="card mh-route-card">
+    <div class="title">&#36879;&#26126;&#20195;&#29702;&#38142;&#36335;</div>
+    <div class="mh-route-row"><span>TUN &#25509;&#21475;</span><b>{{MHTUN}}</b></div>
+    <div class="mh-route-row"><span>&#31574;&#30053;&#36335;&#30001;&#25509;&#31649;</span><b>{{MHRULES}}</b></div>
+    <div class="mh-route-row"><span>IPv6 接管</span><b>{{MHRULES6}}</b></div>
+    <div class="mh-route-row"><span>配置文件</span><b>{{MHCONFIG}}</b></div>
+    <div class="mh-route-row"><span>&#22823;&#38470; IP &#38598;&#21512;</span><b>{{MHIPSET}} &#26465;</b></div>
+    <p class="func-note">安装目录：{{MHDIR}}</p>
+    <p class="func-note">&#36827;&#31243;&#12289; TUN &#21644;&#31574;&#30053;&#36335;&#30001;&#22343;&#23601;&#32490;&#26102;&#25165;&#26174;&#31034;IPv4 链路就绪；不等于已验证外网连通&#12290;</p>
+  </div>
+
+</body>
+</html>

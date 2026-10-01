@@ -11,21 +11,28 @@
     "notes": "Compiled beta.3 renderer; ELF64 AArch64 static musl."
   },
   "ui": {
-    "version": "0.10.52-beta",
+    "version": "1.2.13-beta.3",
     "requiredRendererMarker": "U60_SCREEN_BETA_3",
     "asset": "ui.tar.gz",
     "sha256": "333a97a2cb90960d844c5c94f9ac1800fa8072190c8f3e3831603d444a8e6d08",
     "notes": "Install with the renderer from this package; adds traffic summaries and WiFi power/direct-supply controls."
   },
   "datad": {
+    "version": "0.10.52",
+    "release": "v0.10.52",
     "asset": "zwrt-datad-aarch64",
-    "sha256": "5077fd140bbb6e6b0344390b7a07ec53d85617f245f990388ff42bd135659677",
-    "unchanged": true,
-    "notes": "Existing paired data service; unchanged."
+    "sha256": "683289cc1d69e1964c0c0a04a196ee5440d12dcdffab98d98e99923196152862",
+    "notes": "MU5252 modem identifiers use 5G / 4G1 (V3E2) / 4G2 (V3E1); sms.send_raw sender names updated, legacy aliases remain accepted."
   },
   "validation": {
     "cChecks": 397,
     "installerCases": 11,
+    "hardwareVerified": false,
+    "longTermSoakVerified": false
+  },
+  "pairing": {
+    "devuiRelease": "0.10.52-beta",
+    "datadRelease": "v0.10.52",
     "hardwareVerified": false,
     "longTermSoakVerified": false
   }

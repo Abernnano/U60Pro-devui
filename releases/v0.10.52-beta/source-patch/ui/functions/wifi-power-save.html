@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>WiFi 节能与供电</title></head>
+<body>
+  <div class="card power-hero">
+    <div class="power-kicker">设备控制</div>
+    <div class="power-heading">WiFi 节能与供电</div>
+    <div class="power-summary">无线省电 · 电量上限 · 自动直供</div>
+  </div>
+  <div class="card power-card">
+    <div class="power-heading"><span class="power-index">01</span>无线节能</div>
+    <div class="power-hint">{{PSMSTATE}}</div>
+    <div class="seg seg2 power-segments">
+      <a href="act:psmon" class="segc {{PSMONCLASS}}">省电模式</a>
+      <a href="act:psmoff" class="segc {{PSMOFFCLASS}}">性能模式</a>
+    </div>
+    <a href="act:wifi24" class="power-band"><span>2.4 GHz</span><b class="{{WIFI24CLASS}}">{{WIFI24STATE}} ›</b></a>
+    <a href="act:wifi5" class="power-band"><span>5 GHz</span><b class="{{WIFI5CLASS}}">{{WIFI5STATE}} ›</b></a>
+  </div>
+  <div class="card power-card">
+    <div class="power-heading"><span class="power-index">02</span>按电量自动直供</div>
+    <div class="power-battery">当前电量 <strong>{{POWERBAT}}%</strong><span class="{{CHARGEBACKENDCLASS}}">{{CHARGEBACKEND}}</span></div>
+    <div class="power-setting {{CHARGECTRLCLASS}}">
+      <div class="power-label">充电上限 <b>{{CHARGELIMIT}}%</b></div>
+      <div class="power-steps power-steps4">
+        <a href="act:chargelimit:-5">-5%</a><a href="act:chargelimit:-1">-1%</a><a href="act:chargelimit:1">+1%</a><a href="act:chargelimit:5">+5%</a>
+      </div>
+      <div class="power-label">恢复回差 <b>{{CHARGERECOVER}}%</b></div>
+      <div class="power-steps power-steps2"><a href="act:chargerecover:-1">-1%</a><a href="act:chargerecover:1">+1%</a></div>
+      <a href="act:chargeprotect" class="power-switch {{CHARGEPROTECTCLASS}}"><span>充电保护</span><b>{{CHARGEPROTECT}} ›</b></a>
+      <a href="act:chargeauto" class="power-switch {{CHARGEAUTOCLASS}}"><span>自动直供</span><b>{{CHARGEAUTO}} ›</b></a>
+    </div>
+    <div class="power-rule">{{CHARGERULE}}</div>
+    <div class="power-hint">{{CHARGEHINT}}</div>
+  </div>
+  <div class="card power-card">
+    <div class="power-heading"><span class="power-index">03</span>手动直供</div>
+    <div class="power-hint">{{MANUALPOWER}} · {{POWERSTATE}}</div>
+    <div class="seg seg2 power-segments">
+      <a href="act:dpson" class="segc {{MANUALONCLASS}}">开启直供</a>
+      <a href="act:dpsoff" class="segc {{MANUALOFFCLASS}}">关闭直供</a>
+    </div>
+    <div class="power-hint">手动设置会关闭自动直供。</div>
+  </div>
+</body></html>

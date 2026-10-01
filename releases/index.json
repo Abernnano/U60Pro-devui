@@ -1,20 +1,26 @@
-﻿{
-    "releases":  [
-                     {
-                         "generation":  "first",
-                         "directory":  "releases/v1.2.13-beta.2",
-                         "source":  "local-assets/v1.2.13_beta2",
-                         "version":  "1.2.13-beta.2"
-                     },
-                     {
-                         "generation":  "second",
-                         "directory":  "releases/v1.2.13-beta.3",
-                         "source":  "v1.2.13_beta",
-                         "version":  "1.2.13-beta.3"
-                     }
-                 ],
-    "generatedAt":  "2026-09-28",
-    "naming":  "semantic-pre-release",
-    "recommended":  "v1.2.13-beta.3",
-    "repository":  "Abernnano/U60Pro-devui"
+{
+  "releases": [
+    {
+      "generation": "first",
+      "directory": "releases/v1.2.13-beta.2",
+      "source": "local-assets/v1.2.13_beta2",
+      "version": "1.2.13-beta.2"
+    },
+    {
+      "generation": "second",
+      "directory": "releases/v1.2.13-beta.3",
+      "source": "v1.2.13_beta",
+      "version": "1.2.13-beta.3"
+    },
+    {
+      "generation": "renamed",
+      "directory": "releases/v0.10.52-beta",
+      "source": "v1.2.13_beta (renamed from v1.2.13-beta.3)",
+      "version": "0.10.52-beta"
+    }
+  ],
+  "generatedAt": "2026-10-01",
+  "naming": "semantic-pre-release",
+  "recommended": "v0.10.52-beta",
+  "repository": "Abernnano/U60Pro-devui"
 }

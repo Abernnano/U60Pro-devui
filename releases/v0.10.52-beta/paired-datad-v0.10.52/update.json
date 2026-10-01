@@ -1,0 +1,1 @@
+{"artifacts":{"binary":{"name":"zwrt-datad-aarch64","sha256":"683289cc1d69e1964c0c0a04a196ee5440d12dcdffab98d98e99923196152862","size":5221968},"installer":{"name":"install-datad.sh","sha256":"eeac8cf423a72243a6ba3e483721bab40f375064b927adec23819497aaf4b6d9","size":23956}},"published_at":"2026-10-01T08:41:37Z","schema":1,"tag":"v0.10.52","version":"0.10.52"}
